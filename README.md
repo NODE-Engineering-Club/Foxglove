@@ -85,3 +85,81 @@ Nice-to-have (not required, not included):
 1. Distance between ASV and next waypoint.
 2. Battery life in Wh remaining.
 3. Any other parameters that help the jury understand the ASV.
+
+
+## GUI Telemetry Bridge (`gui_telemetry_hw`)
+
+### What this adds
+
+Feeds the mandatory Foxglove GUI (`ASKET_GUI_mandatory.json`) with **real boat
+data**. It reads live values from the Pixhawk (via MAVROS) and republishes them
+under the simple topic names the GUI gauges read. Nothing is simulated.
+
+It fills the four gauges + status bar that would otherwise stay empty:
+
+| GUI element        | Publishes            | Type                | Source (MAVROS)                       |
+| ------------------ | -------------------- | ------------------- | ------------------------------------- |
+| Heading gauge      | `/heading`           | `std_msgs/Float64`  | `/mavros/global_position/compass_hdg` |
+| COG gauge          | `/cog`               | `std_msgs/Float64`  | `/mavros/global_position/raw/gps_vel` |
+| SOG gauge          | `/sog`               | `std_msgs/Float64`  | `/mavros/global_position/raw/gps_vel` |
+| Battery gauge      | `/battery_percentage`| `std_msgs/Float64`  | `/mavros/battery`                     |
+| Status indicator   | `/vehicle/status`    | `std_msgs/String`   | `/mavros/state` (flight mode)         |
+
+Status values: `AUTONOMOUS`, `REMOTE`, `STANDBY`, `OUT_OF_CONTROL`.
+
+### Requirements
+
+1. The main stack running (`ros2 launch bringup njord.launch.py`), which starts MAVROS.
+2. MAVROS connected to the Pixhawk (`/mavros/state.connected = true`).
+3. `mavros_msgs` installed (already present, since MAVROS runs).
+
+### How to run it
+
+Standalone (quickest, for testing):
+
+```bash
+python3 gui_telemetry_hw.py
+```
+
+Run it in a second terminal after the main stack is up. Leave it running.
+
+### How to check it works
+
+1. Confirm the five topics now exist:
+   ```bash
+   ros2 topic list | grep -E "/heading|/cog|/sog|/battery_percentage|/vehicle/status"
+   ```
+2. Confirm real values are flowing:
+   ```bash
+   ros2 topic echo /heading --once
+   ros2 topic echo /vehicle/status --once
+   ```
+3. Open the GUI in Foxglove and import `ASKET_GUI_mandatory.json`. The four
+   gauges should show needles and the status bar should show the current mode.
+
+### Troubleshooting
+
+1. **Status shows `OUT_OF_CONTROL` and gauges are empty**
+   MAVROS is not talking to the Pixhawk. Check:
+   ```bash
+   ros2 topic echo /mavros/state --once
+   ```
+   If `connected: false`, fix the `fcu_url` in `njord.launch.py` (it is set to
+   `tcp://localhost:5777`; on the real boat this must point at the Pixhawk
+   serial device, e.g. `/dev/ttyACM0:57600`). Nothing here works until
+   `connected: true`.
+
+2. **Battery reads 0%**
+   The ArduPilot battery monitor is not configured yet. `BatteryState.percentage`
+   returns `-1` (unknown) until it is set up in QGC/params; the node maps that to
+   0%. So 0% means "not configured," not "empty."
+
+3. **Heading looks wrong**
+   `/heading` is taken straight from the Pixhawk compass. If it is off, the fix
+   is compass calibration in QGC, not this node.
+
+### Optional: run it automatically with the stack
+
+To launch it alongside everything else, add it as a node in
+`bringup/launch/njord.launch.py` (and add `mavros_msgs` to the owning package's
+`package.xml`). Not required for testing.
