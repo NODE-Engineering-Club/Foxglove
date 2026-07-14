@@ -75,8 +75,7 @@ display the following data:
 | 2 | Latitude                                                 | Yes                |
 | 3 | Longitude                                                | Yes                |
 | 4 | Heading                                                  | Yes                |
-| 5 | Course over ground (COG) with trail, vs plot of the      | Partial — COG value shown; trail + ideal-route overlay not included in this layout |
-      ideal route from GNSS points 
+| 5 | Course over ground (COG) with trail, vs plot of the ideal route from GNSS points | Partial — COG value shown; trail + ideal-route overlay not included in this layout |
 | 6 | Speed over ground                                        | Yes                |
 | 7 | Battery life in %                                        | Yes                |
 | 8 | Status indicator (autonomous / remote / standby / out of control) | Yes       |
